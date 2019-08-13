@@ -7,12 +7,13 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"github.com/jigetage/goheartbeat/common"
 )
 
 type HeartBeatCli struct {
 	TimeDur    time.Duration
 	RemoteAddr string
-	Msg        Msg
+	Msg        common.Msg
 	atomic.Value
 }
 
@@ -21,18 +22,12 @@ var (
 	once sync.Once
 )
 
-
-type Msg struct {
-	CliName string `json:"cli_name"`
-	Info    string `json:"info"`
-}
-
 func NewHeartBeatCli(remoteAddr string, dur time.Duration, nameCli string, info string) *HeartBeatCli {
 	once.Do(func() {
 		HeartBeatClient = &HeartBeatCli{
 			TimeDur:    dur,
 			RemoteAddr: remoteAddr,
-			Msg: Msg{
+			Msg: common.Msg{
 				CliName: nameCli,
 				Info:    info,
 			},
@@ -47,17 +42,14 @@ func (hb *HeartBeatCli) Run() error {
 		log.Fatalf("dial tcp failed, error is: %v\n", err)
 		return err
 	}
+	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(time.Duration(common.Timeout) * time.Second))
 
 	timer := time.NewTicker(hb.TimeDur)
 	for  {
 		select {
 		case <- timer.C:
-			err := hb.SendHeartBeat(conn)
-			if nil != err {
-				return err
-			}
-		case <- time.After(5 * hb.TimeDur):
-			log.Fatal("oops, no data")
+			hb.SendHeartBeat(conn)
 		}
 	}
 
@@ -70,13 +62,26 @@ func (hb *HeartBeatCli) SendHeartBeat (conn net.Conn) error {
 		log.Printf("format json failed, error is: %v\n", err)
 		return err
 	}
-	log.Println(string(jsonv))
+	log.Println("msg send: " + string(jsonv))
 
+	// send heartbeat msg
 	_, err = conn.Write(jsonv)
 	if nil != err {
 		log.Printf("write data failed, error is: %v\n", err)
 		return err
 	}
+
+	// receive msg
+	buf := make([]byte, common.RecvBuf)
+	cnt, err := conn.Read(buf)
+	if nil != err || 0 == cnt {
+		// set deadline duration again
+		//conn.SetDeadline(time.Now().Add(time.Duration(common.Timeout) * time.Second))
+		log.Printf("read data failed, error is: %v\n", err)
+		return err
+	}
+	// process recv msg
+	log.Println("msg recv: " + string(buf[:cnt]))
 
 	return nil
 }
