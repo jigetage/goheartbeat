@@ -35,23 +35,17 @@ func connHandler(c net.Conn) {
 
 	buf := make([]byte, common.RecvBuf)
 	for {
-		log.Println("111111")
 		cnt, err := c.Read(buf)
-		log.Println("555555")
-
 		if err != nil {
 			log.Printf("read failed, error is: %v\n", err)
 			break
 		}
-		log.Println("222222")
 
 		if cnt == 0 {
 			c.Write([]byte("oh, no data"))
-			log.Println("333333")
 			continue
 		}
 
-		log.Println("444444")
 		datav := common.Msg{}
 		err = json.Unmarshal(buf[:cnt], &datav)
 		if err != nil {

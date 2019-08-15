@@ -43,7 +43,6 @@ func (hb *HeartBeatCli) Run() error {
 		return err
 	}
 	defer conn.Close()
-	conn.SetDeadline(time.Now().Add(time.Duration(common.Timeout) * time.Second))
 
 	timer := time.NewTicker(hb.TimeDur)
 	for  {
@@ -64,19 +63,25 @@ func (hb *HeartBeatCli) SendHeartBeat (conn net.Conn) error {
 	}
 	log.Println("msg send: " + string(jsonv))
 
+	// set timeout before request
+	conn.SetWriteDeadline(time.Now().Add(time.Duration(common.Timeout) * time.Second))
 	// send heartbeat msg
 	_, err = conn.Write(jsonv)
 	if nil != err {
+		// no need to set again
+		// conn.SetWriteDeadline(time.Now().Add(time.Duration(common.Timeout) * time.Second))
 		log.Printf("write data failed, error is: %v\n", err)
 		return err
 	}
 
+	// set timeout before request
+	conn.SetWriteDeadline(time.Now())
 	// receive msg
 	buf := make([]byte, common.RecvBuf)
 	cnt, err := conn.Read(buf)
 	if nil != err || 0 == cnt {
-		// set deadline duration again
-		//conn.SetDeadline(time.Now().Add(time.Duration(common.Timeout) * time.Second))
+		// no need to set again
+		// conn.SetWriteDeadline(time.Now().Add(time.Duration(common.Timeout) * time.Second))
 		log.Printf("read data failed, error is: %v\n", err)
 		return err
 	}

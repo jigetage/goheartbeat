@@ -6,6 +6,6 @@ type Msg struct {
 }
 
 var (
-	Timeout int64 = 500
+	Timeout int64 = 5
 	RecvBuf int64 = 128
 )
