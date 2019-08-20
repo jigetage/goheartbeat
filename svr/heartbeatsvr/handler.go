@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 )
 
 type HeartBeatSvr struct {
@@ -27,6 +28,14 @@ func NewHeartBeatSvr(port int64) *HeartBeatSvr {
 	return HeartBeatServer
 }
 
+func connHandlerTemp(c net.Conn)  {
+	for {
+		time.Sleep(time.Second * 2)
+		log.Println("hello, baby")
+		c.Write([]byte("hello, baby\n"))
+	}
+}
+
 func connHandler(c net.Conn) {
 	defer c.Close()
 	if c == nil {
@@ -42,7 +51,7 @@ func connHandler(c net.Conn) {
 		}
 
 		if cnt == 0 {
-			c.Write([]byte("oh, no data"))
+			c.Write([]byte("oh, no data\n"))
 			continue
 		}
 
@@ -50,11 +59,11 @@ func connHandler(c net.Conn) {
 		err = json.Unmarshal(buf[:cnt], &datav)
 		if err != nil {
 			log.Printf("parse msg failed, error is: %v\n", err)
-			c.Write([]byte("oh, msg illegal"))
+			c.Write([]byte("oh, msg illegal\n"))
 			continue
 		}
 
-		c.Write([]byte("hello" + datav.CliName))
+		c.Write([]byte("hello" + datav.CliName + "\n"))
 	}
 }
 
@@ -75,6 +84,7 @@ func (hbs *HeartBeatSvr) ServerSocket() {
 			continue
 		}
 
-		go connHandler(conn)
+		//go connHandler(conn)
+		go connHandlerTemp(conn)
 	}
 }
